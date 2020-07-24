@@ -5,6 +5,7 @@ NUMBER-SIZE MAXIMUM-NUMBER * CONSTANT LINE-MAX-LENGTH
 CREATE INPUT-LINE LINE-MAX-LENGTH ALLOT
 VARIABLE MAX-NUMBER
 CREATE NUMBERS MAXIMUM-NUMBER CELLS ALLOT
+CREATE TREE    MAXIMUM-NUMBER 4 * CELLS ALLOT
 
 : READ-NUMBERS
     INPUT-LINE DUP LINE-MAX-LENGTH 
@@ -41,8 +42,6 @@ CREATE NUMBERS MAXIMUM-NUMBER CELLS ALLOT
         DUP I CELLS + @ . 
     LOOP DROP ;
 
-: MIDDLE ( l,r -- m )
-    OVER - 2/ + ; 
 
 : FIRST-LEAF-POSITION ( n -- p )
     1 SWAP
@@ -97,48 +96,62 @@ CREATE NUMBERS MAXIMUM-NUMBER CELLS ALLOT
 \ if x==l && y==r -> t[p]
 \ else 
 \  m = l + (r-l)/2
-\  a <- query-sum t,p*2,l,m,x,min(y,m)
-\  b <- query-sum t,p*2+1,m+1,r,max(x,m+1),y
+\  a <- query-sum t, 2p   ,l  , m , x         , min(y,m)
+\  b <- query-sum t, 2p+1 ,m+1, r , max(x,m+1), y
 \  -> a+b
+
+\ l,m --> l,m,m+1,r --> l,m,x,min(y,m) 
+\ l,m --> l,m,m+1,r --> m+1,r,max(x,m+1),y
+
 
 \ l,r,ql,qr,m ===> l,m,ql,min(qr,m)
 \ OVER OVER MIN \ l,r,ql,qr,m,min(qr,m)
 
 \ a,b,c,d,
 
-: 4DUP  ( a,b,c,d -- a,b,c,d,a,b,c,d )
-    2OVER 2OVER ;
 
-: 4DROP ( a,b,c,d -- )
-    2DROP 2DROP ;
+: MIDDLE ( l,r -- m )
+    OVER - 2/ + ; 
 
-: SAME-INTERVAL? ( l,ql,r,qr -- f )
-    = -ROT = AND ;
-: RIGHT-INTERVAL ( l,ql,r,qr,m,m+1 -- m+1,max[ql,m+1] ,r,qr )
-    NIP          \ l,ql,r,qr,m+1
-    -ROT         \ l,ql,m+1,r,qr
-    2>R          \ l,ql,m+1
-    ROT DROP     \ ql,m+1
-    DUP -ROT MAX \ m+1,max[ql,m+1]
-    2R> ;        \ m+1,max[ql,m+1],r,qr 
+: INTERVALS ( l,r -- l,m,m+1,r )
+    OVER OVER MIDDLE  \ l,r,m
+    DUP 1+ ROT ;      \ l,m,m+1,r
 
-: QUERY-NODE ( l,ql,r,qr,t,p -- n )
-    2>R         \ l,ql,r,qr
-    4DUP SAME-INTERVAL?  IF 
-        4DROP 
-        2R>     \ t,p
+: QUERY-NODE ( l,r,x,y,t,p -- n )
+    2>R
+    2DUP > IF
+        2DROP 2DROP
+        2R> 2DROP
+        0
+        EXIT
+    THEN
+    2OVER 2OVER D= IF
+        2DROP 2DROP
+        2R>
         CELLS + @
-    ELSE              \ l,ql,r,qr
-        MIDDLE DUP 1+ \ l,ql,r,qr,m,m+1
-        RIGHT-INTERVAL 
-        2R>           \ m+1,max[ql,m+1],r,qr,t,p
-        2* 1+ 
-        RECURSE
+    ELSE
+        2SWAP INTERVALS  \ x,y,l,m,m+1,r
+        2>R DUP >R       \ x,y,l,m
+        2OVER            \ x,y,l,m,x,y
+        R> MIN           \ x,y,l,m,x,min m y'
+        2ROT             \ l,m,x,y',x,y
+        2R>              \ l,m,x,y',x,y,m+1,r
+        OVER >R          
+        2SWAP            \ l,m,x,y',m+1,r,x,y
+        SWAP R> MAX SWAP \ l,m,x,y',m+1,r,x'1,y
+        2R@ 2* 1+ RECURSE
+        2R> ROT >R 2* RECURSE 
+        R> +  
     THEN ;
 
-
-
-
+: QUERY-SUM ( x,y,t -- s )
+    DUP @                    \ x,y,t,n
+    FIRST-LEAF-POSITION 1-   \ x,y,t,r 
+    0 SWAP                   \ x,y,t,l,r
+    ROT >R 2SWAP R> 1        \ l,r,x,y,t,1
+    QUERY-NODE ;
     
+: CREATE-EXAMPLE 1000 0 DO I NUMBERS I CELLS + ! LOOP ;
 
-    
+CREATE-EXAMPLE
+NUMBERS TREE 1000 BUILD-TREE

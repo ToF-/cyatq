@@ -12,15 +12,21 @@ CREATE NUMBERS MAXIMUM-NUMBER CELLS ALLOT
     IF EVALUATE ELSE 2DROP THEN ;
 
 : GET-NUMBER ( a -- a',n )
+    1 SWAP
     BEGIN
-        DUP C@ DIGIT? 0= WHILE 1+
+        DUP C@ DIGIT? 0= WHILE 
+            DUP C@ 45 = IF 
+                SWAP DROP -1 SWAP
+            THEN
+        1+
     REPEAT
     DROP 0 
     BEGIN 
         OVER C@ DIGIT? WHILE
             SWAP 10 * +
             SWAP 1+ SWAP
-    REPEAT ;
+    REPEAT 
+    ROT * ;
 
 : GET-NUMBERS ( a,m,n -- )
     0 DO                 \ a,m

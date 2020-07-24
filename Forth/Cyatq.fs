@@ -42,7 +42,7 @@ CREATE NUMBERS MAXIMUM-NUMBER CELLS ALLOT
     LOOP DROP ;
 
 : MIDDLE ( l,r -- m )
-    OVER - + ; 
+    OVER - 2/ + ; 
 
 : FIRST-LEAF-POSITION ( n -- p )
     1 SWAP
@@ -93,8 +93,27 @@ CREATE NUMBERS MAXIMUM-NUMBER CELLS ALLOT
     DUP @          \ t,n
     BUILD-NODES ;
 
+\ query-sum t,p,l,r,x,y
+\ if x==l && y==r -> t[p]
+\ else 
+\  m = l + (r-l)/2
+\  a <- query-sum t,p*2,l,m,x,min(y,m)
+\  b <- query-sum t,p*2+1,m+1,r,max(x,m+1),y
+\  -> a+b
+
+\ l,r,ql,qr,m ===> l,m,ql,min(qr,m)
+\ OVER OVER MIN \ l,r,ql,qr,m,min(qr,m)
 
 
+
+: QUERY-NODE ( t,p,l,r,ql,qr -- n )
+    2OVER 2OVER D= IF 
+        2DROP 2DROP
+        CELLS + @ 
+    ELSE \ t,p,l,r,ql,qr
+        2OVER MIDDLE   \ t,p,l,r,ql,qr,m
+        .s cr
+    THEN ;
 
 
 

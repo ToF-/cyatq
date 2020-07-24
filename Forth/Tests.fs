@@ -75,5 +75,8 @@ T{ ." BUILD-TREE fills the sum tree with sum of the values from an array and the
     MY-TREE 1 CELLS + @ 
     42 17 + 4807 + 23 + -5 + 1 + -100 + 52 + 1000 + -500 + ?S
     MY-TREE 16 CELLS + @ 42 ?S }T
+
+T{ ." QUERY-NODE returns a node value if x and y match a node limit " CR
+    MY-TREE 1 0 9 0 9 QUERY-NODE 5337 ?S }T
 BYE
 

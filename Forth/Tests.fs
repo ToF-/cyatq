@@ -39,7 +39,7 @@ T{ ." BUILD-LEAVES builds the leaves of sum tree from an array " CR
 }T
 
 T{ ." BUILD-NODES builds the nodes of the sum tree " CR
-    MY-TREE 10 FIRST-LEAF-POSITION BUILD-NODES
+    MY-TREE 10 BUILD-NODES
     MY-TREE 
     CELL+ DUP @   5337 ?S   \ 4837+500
     CELL+ DUP @   4837 ?S   \ 4889-52
@@ -68,5 +68,12 @@ T{ ." BUILD-NODES builds the nodes of the sum tree " CR
     CELL+ DUP @   -500 ?S
     DROP
 }T
+
+T{ ." BUILD-TREE fills the sum tree with sum of the values from an array and the first cell contains the length of initial array " CR
+    MY-NUMBERS MY-TREE 10 BUILD-TREE 
+    MY-TREE @ 10 ?S 
+    MY-TREE 1 CELLS + @ 
+    42 17 + 4807 + 23 + -5 + 1 + -100 + 52 + 1000 + -500 + ?S
+    MY-TREE 16 CELLS + @ 42 ?S }T
 BYE
 

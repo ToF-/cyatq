@@ -77,11 +77,28 @@ CREATE NUMBERS MAXIMUM-NUMBER CELLS ALLOT
         OVER I CELLS + !  \ t -- t[i] <- v
     LOOP DROP ;
 
-: BUILD-NODES ( t p -- )
+: BUILD-NODES ( t n -- )
+    FIRST-LEAF-POSITION \ t,p
+    OVER OVER
     BEGIN
-        ?DUP WHILE 
         2DUP BUILD-NODE-LEVEL
         2/
-    REPEAT DROP ;
+    DUP 1 = UNTIL 
+    2DROP 2DROP ;
+
+: BUILD-TREE ( a,t,n -- )
+    OVER !    \ a,t 
+    DUP ROT OVER @ \ t,t,a,n
+    BUILD-LEAVES   \ t
+    DUP @          \ t,n
+    BUILD-NODES ;
+
+
+
+
+
+
+
+    
 
     

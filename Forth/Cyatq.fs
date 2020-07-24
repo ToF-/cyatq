@@ -104,15 +104,36 @@ CREATE NUMBERS MAXIMUM-NUMBER CELLS ALLOT
 \ l,r,ql,qr,m ===> l,m,ql,min(qr,m)
 \ OVER OVER MIN \ l,r,ql,qr,m,min(qr,m)
 
+\ a,b,c,d,
 
+: 4DUP  ( a,b,c,d -- a,b,c,d,a,b,c,d )
+    2OVER 2OVER ;
 
-: QUERY-NODE ( t,p,l,r,ql,qr -- n )
-    2OVER 2OVER D= IF 
-        2DROP 2DROP
-        CELLS + @ 
-    ELSE \ t,p,l,r,ql,qr
-        2OVER MIDDLE   \ t,p,l,r,ql,qr,m
-        .s cr
+: 4DROP ( a,b,c,d -- )
+    2DROP 2DROP ;
+
+: SAME-INTERVAL? ( l,ql,r,qr -- f )
+    = -ROT = AND ;
+: RIGHT-INTERVAL ( l,ql,r,qr,m,m+1 -- m+1,max[ql,m+1] ,r,qr )
+    NIP          \ l,ql,r,qr,m+1
+    -ROT         \ l,ql,m+1,r,qr
+    2>R          \ l,ql,m+1
+    ROT DROP     \ ql,m+1
+    DUP -ROT MAX \ m+1,max[ql,m+1]
+    2R> ;        \ m+1,max[ql,m+1],r,qr 
+
+: QUERY-NODE ( l,ql,r,qr,t,p -- n )
+    2>R         \ l,ql,r,qr
+    4DUP SAME-INTERVAL?  IF 
+        4DROP 
+        2R>     \ t,p
+        CELLS + @
+    ELSE              \ l,ql,r,qr
+        MIDDLE DUP 1+ \ l,ql,r,qr,m,m+1
+        RIGHT-INTERVAL 
+        2R>           \ m+1,max[ql,m+1],r,qr,t,p
+        2* 1+ 
+        RECURSE
     THEN ;
 
 

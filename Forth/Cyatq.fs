@@ -10,33 +10,54 @@ VARIABLE RESULT-MAX
 
 HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
 
-: READ-NUMBERS
-    INPUT-LINE DUP LINE-MAX-LENGTH 
-    STDIN READ-LINE THROW
-    IF EVALUATE ELSE 2DROP THEN ;
+: READLN ( -- n,f )
+    INPUT-LINE LINE-MAX-LENGTH
+    STDIN READ-LINE THROW ;
 
-: GET-NUMBER ( a -- a',n )
-    1 SWAP
-    BEGIN
-        DUP C@ DIGIT? 0= WHILE 
-            DUP C@ 45 = IF 
-                SWAP DROP -1 SWAP
-            THEN
-        1+
-    REPEAT
-    DROP 0 
+: READ-AND-EVALUATE
+    READLN IF 
+        INPUT-LINE SWAP EVALUATE 
+    ELSE 
+        DROP 
+    THEN ;
+
+: IS-DIGIT? ( c -- f )
+    DUP 48 >= SWAP 57 <= AND ;
+
+: SKIP-DIGIT ( a -- a' )
     BEGIN 
-        OVER C@ DIGIT? WHILE
-            SWAP 10 * +
-            SWAP 1+ SWAP
-    REPEAT 
-    ROT * ;
+        DUP C@          \ a,c
+        DUP IS-DIGIT?   \ a,c,f
+        SWAP 45 = OR 0= \ a,f
+    WHILE 1+ REPEAT ;
 
-: GET-NUMBERS ( a,m,n -- )
-    0 DO                 \ a,m
-        SWAP GET-NUMBER  \ m,a',x
-        ROT DUP >R !     \ a' -- m <- x
-        R> CELL+         \ a',m'
+: ACCUMULATE-NUMBER ( n,c -- n )
+    48 - SWAP
+    10 * + ;
+
+: NEXT-UNUMBER ( a -- a',u )
+    0             \ a,n
+    BEGIN 
+        OVER C@       \ a,n,c
+        DUP IS-DIGIT? \ a,n,c
+    WHILE 
+        ACCUMULATE-NUMBER
+        SWAP 1+ SWAP  \ a',n'
+    REPEAT \ a,n,c
+    DROP ; \ a,n
+
+: NEXT-NUMBER ( a -- a',n )
+    SKIP-DIGIT   \ a
+    DUP C@ 45 = IF 1+ -1  ELSE 1 THEN 
+    SWAP             \ s,a
+    NEXT-UNUMBER     \ s,a',n
+    ROT * ;          \ a',n*s
+    
+: READ-NUMBERS ( s,t,n -- )
+    0 DO                 \ s,t
+        SWAP NEXT-NUMBER \ t,s',n
+        ROT SWAP OVER    \ s,t,n,t
+        ! CELL+          \ s,t'  --  t <- n
     LOOP 
     2DROP ;
 
@@ -45,7 +66,7 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
     STDIN READ-LINE THROW
     IF \ n,m,a,n
         DROP SWAP ROT 
-        GET-NUMBERS
+        READ-NUMBERS
     ELSE
         2DROP
     THEN ;
@@ -54,7 +75,6 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
     0 DO
         DUP I CELLS + @ . 
     LOOP DROP ;
-
 
 : FIRST-LEAF-POSITION ( n -- p )
     1 SWAP
@@ -192,17 +212,35 @@ DEFER THE-TREE
     SWAP DO-QUERIES 
     RESULT-MAX @ ;
 
+: READ-NUMBER-OR-BYE ( -- n )
+    READLN IF 
+        INPUT-LINE NEXT-NUMBER 
+        2DROP
+    ELSE 
+        ." MISSING NUMBER" BYE 
+    THEN ;
+
+: READ-2-NUMBERS-OR-BYE ( -- n )
+    READLN IF 
+        INPUT-LINE NEXT-NUMBER NEXT-NUMBER
+        2DROP
+    ELSE 
+        ." MISSING NUMBERS" BYE 
+    THEN ;
+
 : PROCESS
-    READ-NUMBERS
-    DUP MAX-NUMBER !
-    NUMBERS READ-NUMBER-ARRAY 
+    READ-NUMBER-OR-BYE 
+    MAX-NUMBER !
+    MAX-NUMBER @ NUMBERS READ-NUMBER-ARRAY 
     NUMBERS TREE MAX-NUMBER @ BUILD-TREE
-    READ-NUMBERS
+    READ-NUMBER-OR-BYE 
     0 DO
-        READ-NUMBERS
+        READ-2-NUMBERS-OR-BYE
+        .s CR
+        BYE
         1- SWAP 1- SWAP TREE
         SUM-MAX
         . CR
     LOOP ;
     
-CR DBG PROCESS BYE
+PROCESS BYE

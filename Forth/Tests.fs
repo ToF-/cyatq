@@ -4,25 +4,25 @@ REQUIRE Cyatq.fs
 CREATE MY-NUMBERS 10 CELLS ALLOT
 CREATE MY-TREE    40 CELLS ALLOT
 
-T{ ." GET-NUMBER reads the next number from a string " CR
+T{ ." NEXT-NUMBER reads the next number from a string " CR
     S" 4807 42 17 " DROP 
-    GET-NUMBER 4807 ?S DROP }T
+    NEXT-NUMBER 4807 ?S DROP }T
 
-T{ ." GET-NUMBER reads the next negative number from a string " CR
+T{ ." NEXT-NUMBER reads the next negative number from a string " CR
     S" -4807 42 17 " DROP 
-    GET-NUMBER -4807 ?S DROP }T
+    NEXT-NUMBER -4807 ?S DROP }T
 
 
-T{ ." GET-NUMBERS reads N numbers from a string and store them " CR
+T{ ." READ-NUMBERS reads N numbers from a string and store them " CR
     S" 4807 -42 17 " DROP
-    MY-NUMBERS 3 GET-NUMBERS 
+    MY-NUMBERS 3 READ-NUMBERS 
     MY-NUMBERS 0 CELLS + @ 4807 ?S
     MY-NUMBERS 1 CELLS + @  -42 ?S
     MY-NUMBERS 2 CELLS + @   17 ?S }T
 
 T{ ." BUILD-LEAVES builds the leaves of sum tree from an array " CR
     S" 42 17 4807 23 -5 1 -100 52 1000 -500 " DROP
-    MY-NUMBERS 10 GET-NUMBERS
+    MY-NUMBERS 10 READ-NUMBERS
     MY-TREE MY-NUMBERS 10 BUILD-LEAVES
     MY-TREE 10 FIRST-LEAF-POSITION CELLS + 
     DUP       @ 42 ?S

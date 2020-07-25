@@ -24,12 +24,28 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
 : IS-DIGIT? ( c -- f )
     DUP 48 >= SWAP 57 <= AND ;
 
-: SKIP-DIGIT ( a -- a' )
+: SKIP-NON-DIGIT ( a -- a' )
     BEGIN 
         DUP C@          \ a,c
         DUP IS-DIGIT?   \ a,c,f
         SWAP 45 = OR 0= \ a,f
     WHILE 1+ REPEAT ;
+
+: IS-NUMBER? ( a,n -- f )
+    OVER + >R
+    SKIP-NON-DIGIT 
+    DUP R@ < IF
+        DUP C@ 45 = IF
+            1+
+        THEN
+        DUP R> < IF
+             C@ IS-DIGIT? 
+        ELSE
+            0
+        THEN
+    ELSE
+        R> DROP DROP 0
+    THEN ;
 
 : ACCUMULATE-NUMBER ( n,c -- n )
     48 - SWAP
@@ -47,7 +63,7 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
     DROP ; \ a,n
 
 : NEXT-NUMBER ( a -- a',n )
-    SKIP-DIGIT   \ a
+    SKIP-NON-DIGIT   \ a
     DUP C@ 45 = IF 1+ -1  ELSE 1 THEN 
     SWAP             \ s,a
     NEXT-UNUMBER     \ s,a',n
@@ -228,6 +244,18 @@ DEFER THE-TREE
         ." MISSING NUMBERS" BYE 
     THEN ;
 
+: READ-NUMBER ( a,n,fd -- n,-1|0 )
+    ROT DUP >R -ROT
+    READ-LINE THROW 
+    IF 
+        R@ SWAP IS-NUMBER? IF
+            R> NEXT-NUMBER NIP -1
+        ELSE
+            R> DROP 0
+        THEN
+    ELSE
+        R> 2DROP 0
+    THEN ;
 : PROCESS
     READ-NUMBER-OR-BYE 
     MAX-NUMBER !
@@ -243,4 +271,3 @@ DEFER THE-TREE
         . CR
     LOOP ;
     
-PROCESS BYE

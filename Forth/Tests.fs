@@ -105,5 +105,29 @@ T{ ." SUM-MAX returns the maximum sum of a series of sums " CR
     0 9 SUM-MAX 5837 ?S
 }T
 
+VARIABLE FD-TEMP
+CREATE LINE-TEMP 100 ALLOT
+
+T{ ." READ-NUMBER reads a number from a file " CR
+    S" TEMP.TXT" W/O CREATE-FILE THROW FD-TEMP !
+    S" 4807" FD-TEMP @ WRITE-LINE THROW
+    FD-TEMP @ CLOSE-FILE THROW
+    S" TEMP.TXT" R/O OPEN-FILE THROW FD-TEMP !
+    LINE-TEMP 100 FD-TEMP @ READ-NUMBER
+    FD-TEMP @ CLOSE-FILE THROW
+    -1 ?S 4807 ?S }T
+
+T{ ." IS-NUMBER? says if a line contains a number " CR
+    S"    -4807  " IS-NUMBER? -1 ?S
+}T
+
+T{ ." READ-NUMBER returns 0 when no number on the line " CR
+    S" TEMP.TXT" W/O CREATE-FILE THROW FD-TEMP !
+    S" foo" FD-TEMP @ WRITE-LINE THROW
+    FD-TEMP @ CLOSE-FILE THROW
+    S" TEMP.TXT" R/O OPEN-FILE THROW FD-TEMP !
+    LINE-TEMP 100 FD-TEMP @ READ-NUMBER
+    FD-TEMP @ CLOSE-FILE THROW
+    0 ?S }T
 BYE
 

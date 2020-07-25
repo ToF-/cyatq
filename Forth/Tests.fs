@@ -13,16 +13,16 @@ T{ ." NEXT-NUMBER reads the next negative number from a string " CR
     NEXT-NUMBER -4807 ?S DROP }T
 
 
-T{ ." READ-NUMBERS reads N numbers from a string and store them " CR
+T{ ." NEXT-NUMBERS reads N numbers from a string and store them " CR
     S" 4807 -42 17 " DROP
-    MY-NUMBERS 3 READ-NUMBERS 
+    MY-NUMBERS 3 NEXT-NUMBERS 
     MY-NUMBERS 0 CELLS + @ 4807 ?S
     MY-NUMBERS 1 CELLS + @  -42 ?S
     MY-NUMBERS 2 CELLS + @   17 ?S }T
 
 T{ ." BUILD-LEAVES builds the leaves of sum tree from an array " CR
     S" 42 17 4807 23 -5 1 -100 52 1000 -500 " DROP
-    MY-NUMBERS 10 READ-NUMBERS
+    MY-NUMBERS 10 NEXT-NUMBERS
     MY-TREE MY-NUMBERS 10 BUILD-LEAVES
     MY-TREE 10 FIRST-LEAF-POSITION CELLS + 
     DUP       @ 42 ?S
@@ -38,8 +38,8 @@ T{ ." BUILD-LEAVES builds the leaves of sum tree from an array " CR
     DROP
 }T
 
-T{ ." BUILD-NODES builds the nodes of the sum tree " CR
-    MY-TREE 10 BUILD-NODES
+T{ ." BUILD-NODE-LEVELS builds the nodes of the sum tree " CR
+    MY-TREE 10 BUILD-NODE-LEVELS
     MY-TREE 
     CELL+ DUP @   5337 ?S   \ 4837+500
     CELL+ DUP @   4837 ?S   \ 4889-52
@@ -129,5 +129,21 @@ T{ ." READ-NUMBER returns 0 when no number on the line " CR
     LINE-TEMP 100 FD-TEMP @ READ-NUMBER
     FD-TEMP @ CLOSE-FILE THROW
     0 ?S }T
+
+T{ ." READ-NUMBERS reads and stores all the numbers on file line " CR
+    S" TEMP.TXT" W/O CREATE-FILE THROW FD-TEMP !
+    S" 42 17 23 1 100" FD-TEMP @ WRITE-LINE THROW
+    FD-TEMP @ CLOSE-FILE THROW
+    S" TEMP.TXT" R/O OPEN-FILE THROW FD-TEMP !
+    LINE-TEMP 100 MY-NUMBERS 5 FD-TEMP @ READ-NUMBERS
+    MY-NUMBERS 0 CELLS + @ 42 ?S 
+    MY-NUMBERS 1 CELLS + @ 17 ?S 
+    MY-NUMBERS 2 CELLS + @ 23 ?S 
+    MY-NUMBERS 3 CELLS + @  1 ?S 
+    MY-NUMBERS 4 CELLS + @ 100 ?S 
+
+    }T
+
 BYE
+
 

@@ -7,139 +7,130 @@ VARIABLE MAX-NUMBER
 CREATE NUMBERS MAXIMUM-NUMBER CELLS ALLOT
 CREATE TREE    MAXIMUM-NUMBER 4 * CELLS ALLOT
 VARIABLE RESULT-MAX
+0 CONSTANT FAILURE
+-1 CONSTANT SUCCESS
 
 HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
 
-: READLN ( -- n,f )
-    INPUT-LINE LINE-MAX-LENGTH
-    STDIN READ-LINE THROW ;
+: IS-DIGIT? ( char -- flag )
+    DUP  [CHAR] 0 >= 
+    SWAP [CHAR] 9 <= AND ;
 
-: READ-AND-EVALUATE
-    READLN IF 
-        INPUT-LINE SWAP EVALUATE 
-    ELSE 
-        DROP 
-    THEN ;
-
-: IS-DIGIT? ( c -- f )
-    DUP 48 >= SWAP 57 <= AND ;
-
-: SKIP-NON-DIGIT ( a -- a' )
+: SKIP-NON-DIGIT ( addr -- addr )
     BEGIN 
-        DUP C@          \ a,c
-        DUP IS-DIGIT?   \ a,c,f
-        SWAP 45 = OR 0= \ a,f
-    WHILE 1+ REPEAT ;
+        DUP C@          
+        DUP IS-DIGIT?   
+        SWAP [CHAR] - = OR
+    0= WHILE 
+        1+ 
+    REPEAT ;
 
-: IS-NUMBER? ( a,n -- f )
-    OVER + >R
+: IS-NUMBER? ( addr,u -- flag )
+    OVER + >R        \ addr -- limit in return stack
     SKIP-NON-DIGIT 
-    DUP R@ < IF
-        DUP C@ 45 = IF
-            1+
-        THEN
-        DUP R> < IF
-             C@ IS-DIGIT? 
+    DUP R@ < IF      \ not out of limit?
+        DUP C@ [CHAR] - = IF 1+ THEN
+        DUP R> < IF  \ not out of limit?
+             C@ IS-DIGIT?  \ at least one digit ?
         ELSE
-            0
+            FAILURE
         THEN
     ELSE
-        R> DROP DROP 0
+        R> 2DROP 
+        FAILURE
     THEN ;
 
-: ACCUMULATE-NUMBER ( n,c -- n )
-    48 - SWAP
+: ACCUMULATE-NUMBER ( u,char -- u )
+    [CHAR] 0 - SWAP
     10 * + ;
 
-: NEXT-UNUMBER ( a -- a',u )
-    0             \ a,n
+: NEXT-UNUMBER ( addr -- addr',u )
+    0                 \ addr,acc
     BEGIN 
-        OVER C@       \ a,n,c
-        DUP IS-DIGIT? \ a,n,c
+        OVER C@       \ addr,acc,char
+        DUP IS-DIGIT? \ addr,acc,char,flag
     WHILE 
-        ACCUMULATE-NUMBER
-        SWAP 1+ SWAP  \ a',n'
-    REPEAT \ a,n,c
-    DROP ; \ a,n
+        ACCUMULATE-NUMBER  \ addr,acc
+        SWAP 1+ SWAP       \ addr',acc
+    REPEAT \ addr,acc,char
+    DROP ; 
 
-: NEXT-NUMBER ( a -- a',n )
-    SKIP-NON-DIGIT   \ a
-    DUP C@ 45 = IF 1+ -1  ELSE 1 THEN 
-    SWAP             \ s,a
-    NEXT-UNUMBER     \ s,a',n
-    ROT * ;          \ a',n*s
+: NEXT-NUMBER ( addr -- addr',n )
+    SKIP-NON-DIGIT   \ addr
+    DUP C@           \ addr,char
+    [CHAR] - = IF 1+ -1 ELSE 1 
+               THEN  \ addr,sign
+    SWAP             \ sign,addr
+    NEXT-UNUMBER     \ sign,addr,u
+    ROT * ;          \ addr,n
     
-: READ-NUMBERS ( s,t,n -- )
-    0 DO                 \ s,t
-        SWAP NEXT-NUMBER \ t,s',n
-        ROT SWAP OVER    \ s,t,n,t
-        ! CELL+          \ s,t'  --  t <- n
+: NEXT-NUMBERS ( addr,array,u -- )
+    0 DO                 \ addr,array
+        SWAP NEXT-NUMBER \ array,addr',n
+        ROT SWAP OVER    \ addr',array,n,array
+        ! CELL+          \ addr',array++
     LOOP 
     2DROP ;
 
-: READ-NUMBER-ARRAY ( n,m -- )
-    INPUT-LINE DUP LINE-MAX-LENGTH 
-    STDIN READ-LINE THROW
-    IF \ n,m,a,n
-        DROP SWAP ROT 
-        READ-NUMBERS
+: READ-NUMBERS ( addr,u1,array,u2,filedesc -- )
+    -ROT 2>R >R     \ addr,u1  { u2,array,filedesc }
+    OVER SWAP R>    \ addr,addr,u1,filedesc
+    READ-LINE THROW IF \ addr,u
+        DROP 2R>       \ addr,array,u2
+        NEXT-NUMBERS 
     ELSE
         2DROP
     THEN ;
 
-: PRINT-NUMBERS ( m,n -- )
+: PRINT-NUMBERS ( array,u -- )
     0 DO
         DUP I CELLS + @ . 
     LOOP DROP ;
 
-: FIRST-LEAF-POSITION ( n -- p )
+\ position of the first leaves in a tree
+: FIRST-LEAF-POSITION ( size -- pos )
     1 SWAP
     BEGIN
         DUP 0> WHILE
             2/ SWAP 2* SWAP
     REPEAT DROP ;
 
-: BUILD-NODE ( t,p -- )
-    OVER OVER \ t,p,t,p
-    2* CELLS + \ t,p,tp*2
-    DUP CELL+  \ t,p,tp*2,tp*2+1
-    @ SWAP @ + \ t,p,v
-    -ROT CELLS + ! ;  \ t[p]<-v
-    
-    
-: BUILD-LEAVES ( t,a,n -- )
-    DUP >R FIRST-LEAF-POSITION \ t,a,p
-    CELLS ROT + SWAP           \ tp,a
+
+\ build all the leaves in the tree
+: BUILD-LEAVES ( tree,array,u -- )
+    DUP >R FIRST-LEAF-POSITION \ tree,array,pos
+    CELLS ROT + SWAP           \ tree+pos,array
     R> 0 DO 
-        OVER OVER           \ tp,a,tp,a
-        @ SWAP !            \ tp,a -- tp <- [a] 
-        CELL+ SWAP          \ a+1,tp
-        CELL+ SWAP          \ tp+1,a+1
+        OVER OVER           \ tree,array,tree,array
+        @ SWAP !            \ tree,array  -- store in tree
+        CELL+ SWAP          \ array',tree
+        CELL+ SWAP          \ tree',array'
     LOOP 2DROP ;
 
-: BUILD-NODE-LEVEL ( t,p -- )
-    DUP 2/ DO
-        DUP I 2* CELLS +  \ t,t2i
-        DUP CELL+         \ t,t2i,t2i+1
-        @ SWAP @ +        \ t,v
-        OVER I CELLS + !  \ t -- t[i] <- v
+\ build all the nodes at a level e.g 4..7
+: BUILD-NODE-LEVEL ( tree,pos -- )
+    DUP 2/ DO             \ from pos/2 to pos ..
+        DUP I 2* CELLS +  \ tree,tree+i*2
+        DUP CELL+         \ tree,tree+i*2,tree+i*2+1
+        @ SWAP @ +        \ tree,right+left
+        OVER I CELLS + !  \ tree -- tree+i <- right+left 
     LOOP DROP ;
 
-: BUILD-NODES ( t n -- )
-    FIRST-LEAF-POSITION \ t,p
-    OVER OVER
+\ build all the nodes level
+: BUILD-NODE-LEVELS ( tree,size -- )
+    FIRST-LEAF-POSITION      \ tree,pos
     BEGIN
-        2DUP BUILD-NODE-LEVEL
-        2/
+        2DUP BUILD-NODE-LEVEL \ tree,pos 
+        2/                    \ tree,pos/2
     DUP 1 = UNTIL 
-    2DROP 2DROP ;
+    2DROP ;
 
-: BUILD-TREE ( a,t,n -- )
-    OVER !    \ a,t 
-    DUP ROT OVER @ \ t,t,a,n
-    BUILD-LEAVES   \ t
-    DUP @          \ t,n
-    BUILD-NODES ;
+: BUILD-TREE ( array,tree,size -- )
+    OVER !    \ store tree size in tree[0]
+    DUP ROT OVER @ \ tree,tree,array,size
+    BUILD-LEAVES   \ tree
+    DUP @          \ tree,size
+    BUILD-NODE-LEVELS ;
 
 
 : MIDDLE ( l,r -- m )
@@ -228,22 +219,6 @@ DEFER THE-TREE
     SWAP DO-QUERIES 
     RESULT-MAX @ ;
 
-: READ-NUMBER-OR-BYE ( -- n )
-    READLN IF 
-        INPUT-LINE NEXT-NUMBER 
-        2DROP
-    ELSE 
-        ." MISSING NUMBER" BYE 
-    THEN ;
-
-: READ-2-NUMBERS-OR-BYE ( -- n )
-    READLN IF 
-        INPUT-LINE NEXT-NUMBER NEXT-NUMBER
-        2DROP
-    ELSE 
-        ." MISSING NUMBERS" BYE 
-    THEN ;
-
 : READ-NUMBER ( a,n,fd -- n,-1|0 )
     ROT DUP >R -ROT
     READ-LINE THROW 
@@ -256,18 +231,5 @@ DEFER THE-TREE
     ELSE
         R> 2DROP 0
     THEN ;
-: PROCESS
-    READ-NUMBER-OR-BYE 
-    MAX-NUMBER !
-    MAX-NUMBER @ NUMBERS READ-NUMBER-ARRAY 
-    NUMBERS TREE MAX-NUMBER @ BUILD-TREE
-    READ-NUMBER-OR-BYE 
-    0 DO
-        READ-2-NUMBERS-OR-BYE
-        .s CR
-        BYE
-        1- SWAP 1- SWAP TREE
-        SUM-MAX
-        . CR
-    LOOP ;
+
     

@@ -90,5 +90,20 @@ T{ ." QUERY-SUM returns a sum of numbers in the array between y and y " CR
     0 9 MY-TREE QUERY-SUM 5337 ?S 
 }T
 
+: THAT-TREE
+    MY-TREE ;
+
+T{ ." SUM-MAX returns the maximum sum of a series of sums " CR
+   ' THAT-TREE IS THE-TREE 
+    0 0 SUM-MAX 42 ?S
+    0 1 SUM-MAX 59 ?S
+    1 2 SUM-MAX 4824 ?S
+    4 5 SUM-MAX 1 ?S
+    4 7 SUM-MAX 52 ?S
+    8 9 SUM-MAX 1000 ?S
+    7 9 SUM-MAX 1052 ?S
+    0 9 SUM-MAX 5837 ?S
+}T
+
 BYE
 

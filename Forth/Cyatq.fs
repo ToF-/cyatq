@@ -40,6 +40,16 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
     LOOP 
     2DROP ;
 
+: READ-NUMBER-ARRAY ( n,m -- )
+    INPUT-LINE DUP LINE-MAX-LENGTH 
+    STDIN READ-LINE THROW
+    IF \ n,m,a,n
+        DROP SWAP ROT 
+        GET-NUMBERS
+    ELSE
+        2DROP
+    THEN ;
+
 : PRINT-NUMBERS ( m,n -- )
     0 DO
         DUP I CELLS + @ . 
@@ -94,23 +104,6 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
     BUILD-LEAVES   \ t
     DUP @          \ t,n
     BUILD-NODES ;
-
-\ query-sum t,p,l,r,x,y
-\ if x==l && y==r -> t[p]
-\ else 
-\  m = l + (r-l)/2
-\  a <- query-sum t, 2p   ,l  , m , x         , min(y,m)
-\  b <- query-sum t, 2p+1 ,m+1, r , max(x,m+1), y
-\  -> a+b
-
-\ l,m --> l,m,m+1,r --> l,m,x,min(y,m) 
-\ l,m --> l,m,m+1,r --> m+1,r,max(x,m+1),y
-
-
-\ l,r,ql,qr,m ===> l,m,ql,min(qr,m)
-\ OVER OVER MIN \ l,r,ql,qr,m,min(qr,m)
-
-\ a,b,c,d,
 
 
 : MIDDLE ( l,r -- m )
@@ -199,3 +192,17 @@ DEFER THE-TREE
     SWAP DO-QUERIES 
     RESULT-MAX @ ;
 
+: PROCESS
+    READ-NUMBERS
+    DUP MAX-NUMBER !
+    NUMBERS READ-NUMBER-ARRAY 
+    NUMBERS TREE MAX-NUMBER @ BUILD-TREE
+    READ-NUMBERS
+    0 DO
+        READ-NUMBERS
+        1- SWAP 1- SWAP TREE
+        SUM-MAX
+        . CR
+    LOOP ;
+    
+CR DBG PROCESS BYE

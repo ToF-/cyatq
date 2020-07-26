@@ -1,94 +1,87 @@
 
-7 CONSTANT NUMBER-SIZE
-50000 CONSTANT MAXIMUM-NUMBER
-NUMBER-SIZE MAXIMUM-NUMBER * CONSTANT LINE-MAX-LENGTH
-CREATE INPUT-LINE LINE-MAX-LENGTH ALLOT
-VARIABLE MAX-NUMBER
-VARIABLE MAX-QUERIES
-CREATE NUMBERS MAXIMUM-NUMBER CELLS ALLOT
-CREATE TREE    MAXIMUM-NUMBER 4 * CELLS ALLOT
+50000 CONSTANT NN
+7 NN * CONSTANT LL
+CREATE INPUT-LINE LL ALLOT
+VARIABLE N
+CREATE NS NN CELLS ALLOT
+CREATE TREE    NN 4 * CELLS ALLOT
 VARIABLE RESULT-MAX
-0 CONSTANT FAILURE
--1 CONSTANT SUCCESS
-2VARIABLE QUERY-ARGS
+2VARIABLE QA
 
 : 3DUP ( a,b,c -- a,b,c,a,b,c )
     DUP 2OVER ROT ; 
     
 HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
 
-: IS-DIGIT? ( char -- flag )
-    DUP  [CHAR] 0 >= 
-    SWAP [CHAR] 9 <= AND ;
+: IS-#? ( char -- flag )
+    DUP  48 >= 
+    SWAP 57 <= AND ;
 
-: SKIP-NON-DIGIT ( addr -- addr )
+: >-># ( addr -- addr )
     BEGIN 
         DUP C@          
-        DUP IS-DIGIT?   
-        SWAP [CHAR] - = OR
+        DUP IS-#?   
+        SWAP 45 = OR
     0= WHILE 
         1+ 
     REPEAT ;
 
-: IS-NUMBER? ( addr,u -- flag )
+: IS-N? ( addr,u -- flag )
     OVER + >R        
-    SKIP-NON-DIGIT 
+    >-># 
     DUP R@ < IF      
-        DUP C@ [CHAR] - = IF 1+ THEN
+        DUP C@ 45 = IF 1+ THEN
         DUP R> < IF  
-             C@ IS-DIGIT?  
+             C@ IS-#?  
         ELSE
-            FAILURE
+            0
         THEN
     ELSE
         R> 2DROP 
-        FAILURE
+        0
     THEN ;
 
-: ACCUMULATE-NUMBER ( u,char -- u )
-    [CHAR] 0 - SWAP
-    10 * + ;
-
-: NEXT-UNUMBER ( addr -- addr',u )
+: >>-U ( addr -- addr',u )
     0                 
     BEGIN 
         OVER C@       
-        DUP IS-DIGIT? 
+        DUP IS-#? 
     WHILE 
-        ACCUMULATE-NUMBER  
+        48 - SWAP
+        10 * + 
         SWAP 1+ SWAP       
     REPEAT 
     DROP ; 
 
-: NEXT-NUMBER ( addr -- addr',n )
-    SKIP-NON-DIGIT   
+: >>-N ( addr -- addr',n )
+    >->#   
     DUP C@           
     [CHAR] - = IF 1+ -1 ELSE 1 
                THEN  
     SWAP             
-    NEXT-UNUMBER     
+    >>-U     
     ROT * ;          
     
-: NEXT-NUMBERS ( addr,array,u -- )
+: >>-NS ( addr,array,u -- )
     0 DO                 
-        SWAP NEXT-NUMBER 
+        SWAP >>-N 
         ROT SWAP OVER    
         ! CELL+          
     LOOP 
     2DROP ;
 
 
-: READ-NEW-LINE ( addr,u,fd -- u,flag )
+: <<L ( addr,u,fd -- u,flag )
     >R 2DUP 0 FILL R>
     READ-LINE THROW ;
 
-: READ-NUMBER ( addr,u,fd -- n,#true | #false )
+: <<N ( addr,u,fd -- n,#true | #false )
     ROT DUP 2SWAP       
-    READ-NEW-LINE IF    
+    <<L IF    
         OVER SWAP       
-        IS-NUMBER? IF   
-            NEXT-NUMBER 
-            NIP SUCCESS 
+        IS-N? IF   
+            >>-N 
+            NIP -1 
         ELSE
             DROP 0
         THEN
@@ -96,31 +89,31 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
         2DROP 0
     THEN ;
 
-: READ-NUMBERS ( addr,u1,array,u2,fd -- )
+: <<NS ( addr,u1,array,u2,fd -- )
     >R 2SWAP OVER SWAP R>    
     READ-LINE THROW IF       
         DROP -ROT            
-        NEXT-NUMBERS
+        >>-NS
     ELSE
         DROP 2DROP 
     THEN ;
 
-: READ-QUERY-ARGS ( addr,u,2var,fd -- )
+: <<QA ( addr,u,2var,fd -- )
     >R -ROT OVER SWAP R> 
     READ-LINE THROW IF   
         DROP SWAP 2      
-        NEXT-NUMBERS
+        >>-NS
     ELSE
         DROP 2DROP
     THEN ;
 
-: PRINT-NUMBERS ( array,u -- )
+: PRINT-NS ( array,u -- )
     0 DO
         DUP I CELLS + @ . 
     LOOP DROP ;
 
 
-: FIRST-LEAF-POSITION ( size -- pos )
+: FLP ( size -- pos )
     1 SWAP
     BEGIN
         DUP 0> WHILE
@@ -129,8 +122,8 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
 
 
 
-: BUILD-LEAVES ( tree,array,u -- )
-    DUP >R FIRST-LEAF-POSITION 
+: }LEAVES ( tree,array,u -- )
+    DUP >R FLP 
     CELLS ROT + SWAP           
     R> 0 DO 
         OVER OVER           
@@ -140,7 +133,7 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
     LOOP 2DROP ;
 
 
-: BUILD-NODE-LEVEL ( tree,pos -- )
+: }NODE-LEVEL ( tree,pos -- )
     DUP 2/ DO             
         DUP I 2* CELLS +  
         DUP CELL+         
@@ -149,21 +142,21 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
     LOOP DROP ;
 
 
-: BUILD-NODE-LEVELS ( tree,size -- )
-    FIRST-LEAF-POSITION      
+: }NODE-LEVELS ( tree,size -- )
+    FLP      
     BEGIN
-        2DUP BUILD-NODE-LEVEL 
+        2DUP }NODE-LEVEL 
         2/                    
     DUP 1 = UNTIL 
     2DROP ;
 
 
-: BUILD-TREE ( array,tree,size -- )
+: }TREE ( array,tree,size -- )
     OVER !    
     DUP ROT OVER @ 
-    BUILD-LEAVES   
+    }LEAVES   
     DUP @          
-    BUILD-NODE-LEVELS ;
+    }NODE-LEVELS ;
 
 
 : MIDDLE ( left,right -- middle )
@@ -173,14 +166,11 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
     OVER OVER MIDDLE  
     DUP 1+ ROT ;      
 
-: SAME-INTERVALS? ( left,right,x,y -- flag )
-    D= ;
-
 : QUERY-NODE ( left,right,x,y,tree,pos -- sum )
     2>R               
     2DUP <= IF
         2OVER 2OVER 
-        SAME-INTERVALS? IF
+        D= IF
             2DROP 2DROP 2R>
             CELLS + @
         ELSE                  
@@ -211,7 +201,7 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
 
 : QUERY-SUM ( x,y,tree -- sum )
     DUP @                    
-    FIRST-LEAF-POSITION 1-   
+    FLP 1-   
     0 SWAP                   
     ROT >R                   
     2SWAP R> 1               
@@ -233,14 +223,6 @@ DEFER ACTION
         DUP I DO-QUERY
     LOOP DROP ;
 
-: PRINT2NUMBERS ( x,y -- )
-    SWAP . . CR ;
-
-' PRINT2NUMBERS IS ACTION
-
-: PRINT-QUERY-SUM ( x,y -- )
-    TREE QUERY-SUM . CR ;
-
 : RECORD-RESULT-MAX ( x,y -- )
     TREE QUERY-SUM 
     RESULT-MAX @ MAX RESULT-MAX ! ;
@@ -255,27 +237,26 @@ DEFER ACTION
 
 : PROCESS ( addr,u,fd -- )
     3DUP                 
-    READ-NUMBER IF       
-        MAX-NUMBER !
+    <<N IF       
+        N !
         3DUP             
-        NUMBERS MAX-NUMBER @ ROT 
-        READ-NUMBERS             
-        NUMBERS TREE MAX-NUMBER @ 
-        BUILD-TREE
-        3DUP READ-NUMBER IF
-            MAX-QUERIES !
-            MAX-QUERIES @ 0 DO
-                3DUP QUERY-ARGS SWAP READ-QUERY-ARGS
-                QUERY-ARGS 2@ 1- SWAP 1- 
+        NS N @ ROT 
+        <<NS             
+        NS TREE N @ 
+        }TREE
+        3DUP <<N IF
+            0 DO
+                3DUP QA SWAP <<QA
+                QA 2@ 1- SWAP 1- 
                 SUM-MAX . CR
             LOOP
             DROP 2DROP
         ELSE
-            ABORT" MISSING NUMBER OF QUERIES"
+            EXIT
         THEN
     ELSE
-        ABORT" MISSING: SIZE OF ARRAY"
+        EXIT
     THEN
 ;
 
-INPUT-LINE LINE-MAX-LENGTH STDIN PROCESS BYE
+INPUT-LINE LL STDIN PROCESS BYE

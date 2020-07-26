@@ -9,6 +9,7 @@ CREATE TREE    MAXIMUM-NUMBER 4 * CELLS ALLOT
 VARIABLE RESULT-MAX
 0 CONSTANT FAILURE
 -1 CONSTANT SUCCESS
+2VARIABLE QUERY-ARGS
 
 HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
 
@@ -72,14 +73,37 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
     LOOP 
     2DROP ;
 
-: READ-NUMBERS ( addr,u1,array,u2,filedesc -- )
-    -ROT 2>R >R     \ addr,u1  { u2,array,filedesc }
-    OVER SWAP R>    \ addr,addr,u1,filedesc
-    READ-LINE THROW IF \ addr,u
-        DROP 2R>       \ addr,array,u2
-        NEXT-NUMBERS 
+\ read a number on a file, return number and a true flag, or false
+: READ-NUMBER ( addr,u,filedesc -- n,#true | #false )
+    ROT DUP 2SWAP       \ addr,addr,u,filedesc
+    READ-LINE THROW IF  \ addr,u
+        OVER SWAP       \ addr,addr,u
+        IS-NUMBER? IF   \ addr
+            NEXT-NUMBER \ addr',n
+            NIP SUCCESS \ n,-1
+        ELSE
+            DROP 0
+        THEN
     ELSE
-        2DROP
+        2DROP 0
+    THEN ;
+
+: READ-NUMBERS ( addr,u1,array,u2,filedesc -- )
+    >R 2SWAP OVER SWAP R>    \ array,u2,addr,addr,u1,filedesc
+    READ-LINE THROW IF       \ array,u2,addr,u3
+        DROP -ROT            \ addr,array,u2
+        NEXT-NUMBERS
+    ELSE
+        DROP 2DROP 
+    THEN ;
+
+: READ-QUERY-ARGS ( addr,u,2var,filedesc -- )
+    >R -ROT OVER SWAP R> \ 2var,addr,addr,u,filedesc
+    READ-LINE THROW IF   \ 2var,addr,u2
+        DROP SWAP 2      \ addr,2var,2
+        NEXT-NUMBERS
+    ELSE
+        DROP 2DROP
     THEN ;
 
 : PRINT-NUMBERS ( array,u -- )
@@ -185,8 +209,6 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
     2SWAP R> 1               \ 0,pos-1,x,y,tree,1 
     QUERY-NODE ;
     
-: CREATE-EXAMPLE 1000 0 DO I NUMBERS I CELLS + ! LOOP ;
-
 DEFER ACTION
 
 \ execute ACTION on paramaters x,x then x,x+1 til x,y
@@ -211,39 +233,19 @@ DEFER ACTION
 : PRINT-QUERY-SUM ( x,y -- )
     TREE QUERY-SUM . CR ;
 
-: RESET-RESULT-MAX ( -- )
-    INTEGER-MIN RESULT-MAX !    
-    ;
 
-DEFER THE-TREE
-
+\ launch a query on the given tree
 : RECORD-RESULT-MAX ( x,y -- )
-    THE-TREE QUERY-SUM 
+    TREE QUERY-SUM 
     RESULT-MAX @ MAX RESULT-MAX ! ;
 
 ' RECORD-RESULT-MAX IS ACTION
 
-: THIS-TREE 
-    TREE ;
-
-' THIS-TREE IS THE-TREE
-
-: SUM-MAX ( x,y,t -- n )
-    RESET-RESULT-MAX 
+\ computes the maximum sum of series i,j | x <= i <= j <= y
+: SUM-MAX ( x,y,tree -- n )
+    INTEGER-MIN RESULT-MAX !    
     SWAP DO-QUERIES 
     RESULT-MAX @ ;
 
-: READ-NUMBER ( a,n,fd -- n,-1|0 )
-    ROT DUP >R -ROT
-    READ-LINE THROW 
-    IF 
-        R@ SWAP IS-NUMBER? IF
-            R> NEXT-NUMBER NIP -1
-        ELSE
-            R> DROP 0
-        THEN
-    ELSE
-        R> 2DROP 0
-    THEN ;
 
     

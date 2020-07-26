@@ -125,6 +125,7 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
     DUP 1 = UNTIL 
     2DROP ;
 
+\ build a sum tree from an array
 : BUILD-TREE ( array,tree,size -- )
     OVER !    \ store tree size in tree[0]
     DUP ROT OVER @ \ tree,tree,array,size
@@ -133,58 +134,71 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
     BUILD-NODE-LEVELS ;
 
 
-: MIDDLE ( l,r -- m )
+: MIDDLE ( left,right -- middle )
     OVER - 2/ + ; 
 
-: INTERVALS ( l,r -- l,m,m+1,r )
-    OVER OVER MIDDLE  \ l,r,m
-    DUP 1+ ROT ;      \ l,m,m+1,r
+: INTERVALS ( left,right -- left,middle,middle+1,right )
+    OVER OVER MIDDLE  \ left,right,middle
+    DUP 1+ ROT ;      
 
-: QUERY-NODE ( l,r,x,y,t,p -- n )
-    2>R
-    2DUP > IF
-        2DROP 2DROP
-        2R> 2DROP
+: SAME-INTERVALS? ( left,right,x,y -- flag )
+    D= ;
+
+: QUERY-NODE ( left,right,x,y,tree,pos -- sum )
+    2>R               \ { pos,tree }
+    2DUP <= IF
+        2OVER 2OVER 
+        SAME-INTERVALS? IF
+            2DROP 2DROP 2R>
+            CELLS + @
+        ELSE                  \ left,right,x,y
+            2SWAP INTERVALS   \ x,y,left,middle,middle+1,right
+            2>R DUP >R        \ x,y,left,middle                { right,middle+1,middle }
+            2OVER             \ x,y,left,middle,x,y
+            R>                \ x,y,left,middle,x,y,middle     { right,middle+1 }
+            MIN               \ x,y,left,middle,x,min y middle 
+            2ROT              \ left,middle,x,middle y min,x,y
+            2R>               \ left,middle,x,middle y min,x,y,middle+1,right 
+            OVER >R           \ left,middle,x,middle y min,x,y,middle+1,right { middle+1 }
+            2SWAP             \ left,middle,y,middle y min,middle+1,right,x,y 
+            SWAP R>           \ left,middle,y,middle y min,middle+1,right,y,x,middle+1 
+            MAX SWAP          \ left,middle,y,middle y min,middle+1,right,middle+1 x max,y 
+            2R@               \ left,middle,y,middle y min,middle+1,right,middle+1 x max,y,tree,pos
+            2* 1+             \ left,middle,y,middle y min,middle+1,right,middle+1 x max,y,tree,pos*2+1 
+            RECURSE           \ left,middle,y,middle y min,sumr
+            2R>               \ left,middle,y,middle y min,sumr,tree,pos
+            ROT >R            \ left,middle,y,middle y min,tree,pos   { sumr }
+            2*                \ left,middle,y,middle y min,tree,pos*2
+            RECURSE           \ suml
+            R> +              \ suml+sumr
+        THEN
+    ELSE   \ x > y : out of limit
+        2DROP 2DROP 2R> 2DROP
         0
-        EXIT
-    THEN
-    2OVER 2OVER D= IF
-        2DROP 2DROP
-        2R>
-        CELLS + @
-    ELSE
-        2SWAP INTERVALS  \ x,y,l,m,m+1,r
-        2>R DUP >R       \ x,y,l,m
-        2OVER            \ x,y,l,m,x,y
-        R> MIN           \ x,y,l,m,x,min m y'
-        2ROT             \ l,m,x,y',x,y
-        2R>              \ l,m,x,y',x,y,m+1,r
-        OVER >R          
-        2SWAP            \ l,m,x,y',m+1,r,x,y
-        SWAP R> MAX SWAP \ l,m,x,y',m+1,r,x'1,y
-        2R@ 2* 1+ RECURSE
-        2R> ROT >R 2* RECURSE 
-        R> +  
     THEN ;
 
-: QUERY-SUM ( x,y,t -- s )
-    DUP @                    \ x,y,t,n
-    FIRST-LEAF-POSITION 1-   \ x,y,t,r 
-    0 SWAP                   \ x,y,t,l,r
-    ROT >R 2SWAP R> 1        \ l,r,x,y,t,1
+: QUERY-SUM ( x,y,tree -- sum )
+    DUP @                    \ x,y,tree,size
+    FIRST-LEAF-POSITION 1-   \ x,y,tree,pos-1 
+    0 SWAP                   \ x,y,tree,0,pos-1
+    ROT >R                   \ x,y,0,pos-1 { tree }
+    2SWAP R> 1               \ 0,pos-1,x,y,tree,1 
     QUERY-NODE ;
     
 : CREATE-EXAMPLE 1000 0 DO I NUMBERS I CELLS + ! LOOP ;
 
 DEFER ACTION
 
-: DO-QUERY ( y,x -- action on x,x then x,x+1 .. x,y )
-    DUP -ROT
-    DO
-        DUP I ACTION
+\ execute ACTION on paramaters x,x then x,x+1 til x,y
+: DO-QUERY ( y,x -- )
+    DUP -ROT            \ x,y,x
+    DO                  \ from x to y
+        DUP I           \ x,i
+        ACTION    
     LOOP DROP ;
 
-: DO-QUERIES ( y,x -- action on series x,x, x,x+1, x,y, x+1,x+1, x+1,x+2, ... )
+\ execute ACTION on series x,y, x,x+1 .. x,y then x+1,x+1, x+1,x+2, .. x+1,y .. y,y
+: DO-QUERIES ( y,x -- )
     SWAP 1+ DUP ROT DO
         DUP I DO-QUERY
     LOOP DROP ;

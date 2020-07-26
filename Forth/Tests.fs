@@ -152,6 +152,19 @@ T{ ." READ-QUERY reads x and y query parameters on a file " CR
     QUERY-ARGS 2@ 42 ?S 4807 ?S 
 }T
 
+T{ ." PROCESS read numbers, build the tree and answer queries " CR
+    TEMP-FILE-NAME W/O CREATE-FILE THROW FD-TEMP !
+    S" 6"                    FD-TEMP @ WRITE-LINE THROW
+    S" 42 17 4807 23 100 -1" FD-TEMP @ WRITE-LINE THROW
+    S" 2"                    FD-TEMP @ WRITE-LINE THROW
+    S" 1 6"                  FD-TEMP @ WRITE-LINE THROW
+    S" 1 1"                  FD-TEMP @ WRITE-LINE THROW
+    CLOSE-TEMP-FILE
+    OPEN-TEMP-FILE
+    LINE-TEMP 100 FD-TEMP @ PROCESS
+    CLOSE-TEMP-FILE
+}T
+
 BYE
 
 

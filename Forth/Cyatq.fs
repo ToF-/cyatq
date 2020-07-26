@@ -4,6 +4,7 @@
 NUMBER-SIZE MAXIMUM-NUMBER * CONSTANT LINE-MAX-LENGTH
 CREATE INPUT-LINE LINE-MAX-LENGTH ALLOT
 VARIABLE MAX-NUMBER
+VARIABLE MAX-QUERIES
 CREATE NUMBERS MAXIMUM-NUMBER CELLS ALLOT
 CREATE TREE    MAXIMUM-NUMBER 4 * CELLS ALLOT
 VARIABLE RESULT-MAX
@@ -11,6 +12,9 @@ VARIABLE RESULT-MAX
 -1 CONSTANT SUCCESS
 2VARIABLE QUERY-ARGS
 
+: 3DUP ( a,b,c -- a,b,c,a,b,c )
+    DUP 2OVER ROT ; 
+    
 HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
 
 : IS-DIGIT? ( char -- flag )
@@ -73,10 +77,14 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
     LOOP 
     2DROP ;
 
+\ read a line, filling it with 0 first
+: READ-NEW-LINE ( addr,u,filedesc -- u,flag )
+    >R 2DUP 0 FILL R>
+    READ-LINE THROW ;
 \ read a number on a file, return number and a true flag, or false
 : READ-NUMBER ( addr,u,filedesc -- n,#true | #false )
     ROT DUP 2SWAP       \ addr,addr,u,filedesc
-    READ-LINE THROW IF  \ addr,u
+    READ-NEW-LINE IF    \ addr,u
         OVER SWAP       \ addr,addr,u
         IS-NUMBER? IF   \ addr
             NEXT-NUMBER \ addr',n
@@ -242,10 +250,36 @@ DEFER ACTION
 ' RECORD-RESULT-MAX IS ACTION
 
 \ computes the maximum sum of series i,j | x <= i <= j <= y
-: SUM-MAX ( x,y,tree -- n )
+: SUM-MAX ( x,y -- n )
     INTEGER-MIN RESULT-MAX !    
     SWAP DO-QUERIES 
     RESULT-MAX @ ;
 
+
+\ reads numbers, then queries, then produce results
+: PROCESS ( addr,u,filedesc -- )
+    3DUP                 \ addr,u,filedesc,addr,u,filedesc
+    READ-NUMBER IF       \ addr,u,filedesc
+        MAX-NUMBER !
+        3DUP             \ addr,u,filedesc,addr,u,filedesc
+        NUMBERS MAX-NUMBER @ ROT \ adr,u,filedesc,addr,u,array,u2,filedesc
+        READ-NUMBERS             \ addr,u,filedesc
+        NUMBERS TREE MAX-NUMBER @ \ addr,u,filedesc,array,tree,u2
+        BUILD-TREE
+        3DUP READ-NUMBER IF
+            MAX-QUERIES !
+            MAX-QUERIES @ 0 DO
+                3DUP QUERY-ARGS SWAP READ-QUERY-ARGS
+                QUERY-ARGS 2@ 1- SWAP 1- 
+                SUM-MAX . CR
+            LOOP
+            DROP 2DROP
+        ELSE
+            ABORT" MISSING NUMBER OF QUERIES"
+        THEN
+    ELSE
+        ABORT" MISSING: SIZE OF ARRAY"
+    THEN
+;
 
     

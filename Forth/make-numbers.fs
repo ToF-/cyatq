@@ -1,5 +1,9 @@
+VARIABLE MAX-NUMBER
 : make-numbers
-    50000 0 DO I . LOOP ;
+    MAX-NUMBER @ 0 DO I . LOOP ;
 
-make-numbers
+NEXT-ARG EVALUATE MAX-NUMBER !
+MAX-NUMBER @ . CR
+make-numbers CR
+1 . MAX-NUMBER @ . CR
 bye

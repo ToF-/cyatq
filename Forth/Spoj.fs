@@ -1,6 +1,6 @@
 
 50000 CONSTANT NN
-7 NN * CONSTANT LL
+10 NN * CONSTANT LL
 CREATE INPUT-LINE LL ALLOT
 VARIABLE N
 CREATE NS NN CELLS ALLOT
@@ -207,27 +207,28 @@ HEX -8000000000000000 DECIMAL CONSTANT INTEGER-MIN
     2SWAP R> 1               
     QUERY-NODE ;
     
-DEFER ACTION
+: RECORD-RESULT-MAX ( x,y -- )
+    TREE QUERY-SUM 
+    RESULT-MAX @ MAX RESULT-MAX ! ;
 
 
 : DO-QUERY ( y,x -- )
     DUP -ROT            
     DO                  
         DUP I           
-        ACTION    
+        RECORD-RESULT-MAX
     LOOP DROP ;
 
 
 : DO-QUERIES ( y,x -- )
-    SWAP 1+ DUP ROT DO
-        DUP I DO-QUERY
+    SWAP    
+    1+     
+    DUP   
+    ROT  
+    DO  
+        DUP I   
+        DO-QUERY
     LOOP DROP ;
-
-: RECORD-RESULT-MAX ( x,y -- )
-    TREE QUERY-SUM 
-    RESULT-MAX @ MAX RESULT-MAX ! ;
-
-' RECORD-RESULT-MAX IS ACTION
 
 
 : SUM-MAX ( x,y -- n )

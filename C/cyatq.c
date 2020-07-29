@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <limits.h>
+#include <assert.h>
 
 #define MAXLINE 500000
 #define MAXNUMBER 50000
@@ -9,9 +10,11 @@ int Numbers[MAXNUMBER];
 int Tree[MAXNUMBER*4];
 char Line[MAXLINE];
 
-char *get_line(char *line) {
+int get_int(char *line) {
+    int n;
     fgets(line, MAXLINE, stdin);
-    return line;
+    sscanf(line, "%d", &n);
+    return n;
 }
 
 int get_ints(char *line,int *ints) {
@@ -19,6 +22,7 @@ int get_ints(char *line,int *ints) {
     int acc;
     int minus;
     int count = 0;
+    fgets(line, MAXLINE, stdin);
 
     while(*line && *line != '\n') {
         char c = *line++;
@@ -93,6 +97,7 @@ int max(int a, int b) {
 }
 
 int query_node(int l, int r, int x, int y, int p, int *tree) {
+    // printf("query_node l:%d r:%d x:%d y:%d p:%d\n", l, r, x, y, p);
     if (x>y)
         return 0;
     if (x == l && y == r)
@@ -104,8 +109,7 @@ int query_node(int l, int r, int x, int y, int p, int *tree) {
 int query_sum(int x, int y, int *tree) {
     int l = 0;
     int r = tree[0]-1;
-    int p = first_leaf_position(tree[0]);
-    return query_node(l,r,x,y,p,tree);
+    return query_node(l,r,x,y,1,tree);
 }
 void print_numbers(int *numbers, int n) {
     for (int i=0; i<n; i++) {
@@ -114,23 +118,25 @@ void print_numbers(int *numbers, int n) {
     printf("\n");
 }
 int main() {
-    get_line(Line);
-    get_line(Line);
+    int max_number = get_int(Line);
     int n = get_ints(Line, Numbers);
+    assert(n == max_number);
     build_tree(Numbers, n, Tree);
-    get_line(Line);
+    // print_numbers(Numbers, max_number);
+    int max_query = get_int(Line);
     int query_args[2];
-    get_ints(Line, &max_query);
-    for(int i=0; i<max_query; i++) {
-        get_line(Line);
+    get_ints(Line, query_args);
+    for(int q=0; q<max_query; q++) {
         get_ints(Line, query_args);
+        int x = query_args[0];
+        int y = query_args[1];
         int acc = INT_MIN;
-        for(int i=query_args[0]-1; i<query_args[1]; i++)
-            for(int j=i; i<query_args[1]; j++) {
+        for(int i=x; i<y; i++)
+            for(int j=i; j<y; j++) {
                 int s = query_sum(i, j, Tree);
                 acc = max(s,acc);
         }
-        printf("%d\n",acc);
+        printf("%d %d %d\n",x,y,acc);
     }
     return 0;
 }

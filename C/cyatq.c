@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include <limits.h>
 #include <assert.h>
+#include <string.h>
 
 #define MAXLINE 500000
 #define MAXNUMBER 50000
@@ -17,12 +18,26 @@ int get_int(char *line) {
     return n;
 }
 
-int get_ints(char *line,int *ints) {
+int get_ints(char *line, int *ints) {
+    fgets(line, MAXLINE, stdin);
+    fprintf("%s\n",line);
+    char *strToken = strtok(line, " " );
+    int n = 0;
+    while(strToken != NULL) {
+        scanf("%d",strToken, ints); 
+        printf("%s %d\n",strToken,*ints);
+        n++;
+        ints++;
+        strToken = strtok(NULL, " ");
+    }
+    return n;
+}
+
+int get_iints(char *line,int *ints) {
     int in_number = 0;
     int acc;
     int minus;
     int count = 0;
-    fgets(line, MAXLINE, stdin);
 
     while(*line && *line != '\n') {
         char c = *line++;
@@ -66,26 +81,19 @@ int first_leaf_position(int n) {
     return result;
 }
 
-void build_leaves(int *numbers, int n, int f,int *tree) {
-    for (int i=0 ; i<n; i++) 
-        tree[f+i] = numbers[i];
-}
-
-void build_node_level(int l, int *tree) {
-    for(int i = l/2; i<l; i++) {
-        tree[i] = tree[2*i]+tree[2*i+1];
+void build_node(int l, int r, int *numbers, int *tree, int p) {
+    if (l == r) {
+        tree[p] = numbers[l-1];
+    } else {
+        int m = l + (r-l) / 2;
+        build_node(l,   m, numbers, tree, p*2);
+        build_node(m+1, r, numbers, tree, p*2+1);
+        tree[p] = tree[p*2] + tree[p*2+1];
     }
 }
 
-void build_node_levels(int f, int *tree) {
-    for(int i = f; i>1; i/=2)
-        build_node_level(i, tree);
-}
 void build_tree(int *numbers, int n, int *tree) {
-    tree[0] = n;
-    int f = first_leaf_position(n);
-    build_leaves(numbers, n, f, tree);
-    build_node_levels(f, tree);
+    build_node(1, n, numbers, tree, 1);
 }
 
 int min(int a, int b) {
@@ -97,7 +105,6 @@ int max(int a, int b) {
 }
 
 int query_node(int l, int r, int x, int y, int p, int *tree) {
-    // printf("query_node l:%d r:%d x:%d y:%d p:%d\n", l, r, x, y, p);
     if (x>y)
         return 0;
     if (x == l && y == r)
@@ -106,10 +113,8 @@ int query_node(int l, int r, int x, int y, int p, int *tree) {
     return(query_node(l  ,m  ,x         ,min(y,m),p*2,tree) +
            query_node(m+1,r  ,max(x,m+1),y       ,p*2+1,tree));
 }
-int query_sum(int x, int y, int *tree) {
-    int l = 0;
-    int r = tree[0]-1;
-    return query_node(l,r,x,y,1,tree);
+int query_sum(int x, int y, int *tree, int n) {
+    return query_node(1,n,x,y,1,tree);
 }
 void print_numbers(int *numbers, int n) {
     for (int i=0; i<n; i++) {
@@ -122,21 +127,19 @@ int main() {
     int n = get_ints(Line, Numbers);
     assert(n == max_number);
     build_tree(Numbers, n, Tree);
-    // print_numbers(Numbers, max_number);
     int max_query = get_int(Line);
     int query_args[2];
-    get_ints(Line, query_args);
     for(int q=0; q<max_query; q++) {
         get_ints(Line, query_args);
         int x = query_args[0];
         int y = query_args[1];
         int acc = INT_MIN;
-        for(int i=x; i<y; i++)
-            for(int j=i; j<y; j++) {
-                int s = query_sum(i, j, Tree);
+        for(int i=x; i<=y; i++)
+            for(int j=i; j<=y; j++) {
+                int s = query_sum(i, j, Tree, max_number);
                 acc = max(s,acc);
         }
-        printf("%d %d %d\n",x,y,acc);
+        printf("%d\n",acc);
     }
     return 0;
 }

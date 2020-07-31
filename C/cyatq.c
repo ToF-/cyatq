@@ -7,18 +7,16 @@
 #define MAXNUMBER 50000
 #define LEFT(p)  (p*2)
 #define RIGHT(p) (p*2+1)
-#define INT_MIN (-1000000000)
+#define INT_MIN (-999999999)
 
-int Numbers[MAXNUMBER];
-int SumTree[MAXNUMBER*4];
-int MaxTree[MAXNUMBER*4];
+long Numbers[MAXNUMBER];
 char Line[MAXLINE];
 
 struct node {
-    int segment_sum;
-    int max_prefix_sum;
-    int max_suffix_sum;
-    int max_segment_sum;
+    long segment_sum;
+    long max_prefix_sum;
+    long max_suffix_sum;
+    long max_segment_sum;
 } SegmentTree[MAXNUMBER*4];
 
 
@@ -29,12 +27,12 @@ int get_int(char *line) {
     return n;
 }
 
-int get_ints(char *line, int *ints) {
+int get_ints(char *line, long *ints) {
     fgets(line, MAXLINE, stdin);
     char *strToken = strtok(line, " " );
     int n = 0;
     while(strToken != NULL) {
-        sscanf(strToken, "%d", ints); 
+        sscanf(strToken, "%ld", ints); 
         n++;
         ints++;
         strToken = strtok(NULL, " ");
@@ -47,9 +45,9 @@ int max(int a, int b) {
 }
 
 void print_node(struct node n) {
-    printf("ss:%d mpr:%d msu:%d mss:%d\n", n.segment_sum, n.max_prefix_sum, n.max_suffix_sum, n.max_segment_sum);
+    printf("ss:%ld mpr:%ld msu:%ld mss:%ld\n", n.segment_sum, n.max_prefix_sum, n.max_suffix_sum, n.max_segment_sum);
 }
-void build_tree(int l, int r, int *numbers, struct node *tree, int p) {
+void build_tree(int l, int r, long *numbers, struct node *tree, int p) {
     if (l == r) {
         int v = numbers[l-1];
         tree[p].segment_sum     = v;
@@ -58,7 +56,7 @@ void build_tree(int l, int r, int *numbers, struct node *tree, int p) {
         tree[p].max_segment_sum = v;
     } 
     else {
-        int m = l + (r - l) / 2;
+        int m = (l + r) / 2;
         build_tree(l, m, numbers, tree, LEFT(p));
         build_tree(m+1,r,numbers, tree, RIGHT(p));
         struct node left  = tree[LEFT(p)];
@@ -88,7 +86,7 @@ struct node query_tree(int l, int r, int x, int y, struct node *tree, int p) {
         return tree[p];
     }
     else {
-        int m = l + (r - l) / 2;
+        int m = (l + r) / 2;
         struct node left = query_tree(l, m, x, y, tree, LEFT(p));
         struct node right= query_tree(m+1,r,x, y, tree, RIGHT(p));
         struct node result;
@@ -115,13 +113,13 @@ int main() {
     int n = get_ints(Line, Numbers);
     build_tree(1, n, Numbers, SegmentTree, 1);
     int max_query = get_int(Line);
-    int query_args[2];
+    long query_args[2];
     for(int q=0; q<max_query; q++) {
         get_ints(Line, query_args);
         int x = query_args[0];
         int y = query_args[1];
         struct node result = query_tree(1, n, x, y, SegmentTree, 1);
-        printf("%d\n",result.max_segment_sum);
+        printf("%ld\n",result.max_segment_sum);
     }
     return 0;
 }

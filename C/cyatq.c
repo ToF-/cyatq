@@ -8,7 +8,6 @@
 #define LEFT(p)  (p*2)
 #define RIGHT(p) (p*2+1)
 #define INT_MIN (-999999)
-// #define DEBUG (1)
 
 long Numbers[MAXNUMBER];
 char Line[MAXLINE];
@@ -78,9 +77,6 @@ struct node build_tree(int l, int r, long *numbers, struct node *tree, int p) {
         tree[p].max_prefix_sum  = v;
         tree[p].max_suffix_sum  = v;
         tree[p].max_segment_sum = v;
-#if DEBUG
-        printf("built "); print_node(tree[p]);
-#endif
         return tree[p];
     } 
     else {
@@ -88,47 +84,26 @@ struct node build_tree(int l, int r, long *numbers, struct node *tree, int p) {
         struct node left = build_tree(l, m, numbers, tree, LEFT(p));
         struct node right= build_tree(m+1,r,numbers, tree, RIGHT(p));
         tree[p] = merge_nodes(left, right);
-#if DEBUG
-        printf("built "); print_node(tree[p]);
-#endif
         return tree[p];
     }
 }
 
 struct node query_tree(int l, int r, int x, int y, struct node *tree, int p) {
-#if DEBUG
-    printf("looking for [%d %d] in [ %d %d]\n", x, y, l, r);
-#endif
     if (x > r || y < l) {
-#if DEBUG
-        printf("impossible\n");
-#endif
         struct node result; 
         result.segment_sum     = INT_MIN;
         result.max_prefix_sum  = INT_MIN;
         result.max_suffix_sum  = INT_MIN;
         result.max_segment_sum = INT_MIN;
-#if DEBUG
-        print_node(result);
-#endif
         return result;
     }
     if (l >= x && r <= y) {
-#if DEBUG
-        printf("found ");
-        print_node(tree[p]);
-#endif
         return tree[p];
     }
     int m = (l + r) / 2;
     struct node left = query_tree(l, m, x, y, tree, LEFT(p));
     struct node right= query_tree(m+1,r,x, y, tree, RIGHT(p));
     struct node result = merge_nodes(left, right);
-#if DEBUG
-    printf("merging "); print_node(left);
-    printf("with    "); print_node(right);
-    printf("result= ");print_node(result);
-#endif
     return result;
 }
 void print_numbers(int *numbers, int n) {
